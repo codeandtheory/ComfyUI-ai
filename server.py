@@ -25,6 +25,7 @@ import mimetypes
 from comfy.cli_args import args
 import comfy.utils
 import comfy.model_management
+import node_helpers
 from app.frontend_management import FrontendManager
 from app.user_manager import UserManager
 
@@ -126,7 +127,11 @@ class PromptServer():
 
         @routes.get("/")
         async def get_root(request):
-            return web.FileResponse(os.path.join(self.web_root, "index.html"))
+            response = web.FileResponse(os.path.join(self.web_root, "index.html"))
+            response.headers['Cache-Control'] = 'no-cache'
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+            return response
 
         @routes.get("/embeddings")
         def get_embeddings(self):
@@ -161,10 +166,12 @@ class PromptServer():
             return type_dir, dir_type
 
         def compare_image_hash(filepath, image):
+            hasher = node_helpers.hasher()
+            
             # function to compare hashes of two images to see if it already exists, fix to #3465
             if os.path.exists(filepath):
-                a = hashlib.sha256()
-                b = hashlib.sha256()
+                a = hasher()
+                b = hasher()
                 with open(filepath, "rb") as f:
                     a.update(f.read())
                     b.update(image.file.read())
